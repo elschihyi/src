@@ -44,8 +44,8 @@ func(r *Resource) Get() []byte{
 //make Resource update its info
 func(r *Resource) Update(){
    // run the resource update
-   //update will run ramdom from 1 to 3 sec in our experiment
-   time.Sleep(time.Second*time.Duration(rand.Intn(2)+1))
+   //update will run ramdom from 0 to 2 sec in our experiment
+   time.Sleep(time.Second*time.Duration(rand.Intn(2)))
    r.Flag = false
 }
 

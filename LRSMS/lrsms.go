@@ -2,30 +2,44 @@
 package lrsms
 
 import (
-	"fmt"
-	"errors"
 	"sync"
+	"container/list"
+  "time"
 )
 //******************************************************************************
 // Types Definition
 //******************************************************************************
 type LRSMS struct{
-	resourceRefs map[string]*ResourceRef
-	mutex *sync.Mutex
+	ResourceRefs map[string]*ResourceRef
+	Mutex *sync.Mutex
 }
 
 //******************************************************************************
 //Public Functions
 //******************************************************************************
-func (lrsms *LRSMS) CreateRef(){
-	new_resource_ref := lrsms.NewRF(resource1.URI, resource1.Depended,
-    resource1.CreateTime, resource1.Get,  resource1.Update, resource1.Alert)
+func (lrsms *LRSMS) CreateRef(uri string, depended *list.List,
+	 createTime *time.Time, getFunc Get, updateFunc Update, alertFunc Alert){
+	new_resource_ref := NewRF(uri, depended, createTime, getFunc,
+	 updateFunc, alertFunc)
+  lrsms.Mutex.Lock()
+  lrsms.ResourceRefs[uri] = new_resource_ref
+	for e := depended.Front(); e != nil; e = e.Next() {
+		lrsms.ResourceRefs[e.Value.(string)].Dependent.PushBack(uri)
+	}
+	lrsms.Mutex.Unlock()
 }
-func (lrsms *LRSMS) GetRef(){
+func (lrsms *LRSMS) GetRef(uri string)*ResourceRef{
+	return lrsms.ResourceRefs[uri]
+}
+func (lrsms *LRSMS) GetResource(uri string)[]byte{
+	return lrsms.ResourceRefs[uri].Getfunc()
+}
+func (lrsms *LRSMS) DeleteRef(uri string){
+	if lrsms.ResourceRefs[uri].Dependent.Len() == 0 {
+		lrsms.Mutex.Lock()
+		delete(lrsms.ResourceRefs,uri)
+		lrsms.Mutex.Unlock()
+	}
 }
 func (lrsms *LRSMS) Update(){
-}
-func (lrsms *LRSMS) GerResource(){
-}
-func (lrsms *LRSMS) DeleteRef(){
 }
