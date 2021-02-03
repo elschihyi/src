@@ -7,6 +7,10 @@ import (
   "strconv"
 )
 
+//******************************************************************************
+// Types Definition
+//******************************************************************************
+
 type Get func()[]byte
 type Update func()
 type Alert func()
@@ -33,6 +37,7 @@ func NewRF(uri string, depended *list.List, createTime *time.Time, getFunc Get,
   newRF.Dependent = list.New()
   newRF.CreateTime = createTime
   newRF.Getfunc = getFunc
+  newRF.Updatefunc = updateFunc
   newRF.Alertfunc = alertFunc
   newRF.Flag = false
   return &newRF

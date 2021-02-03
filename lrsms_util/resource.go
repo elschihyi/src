@@ -3,7 +3,7 @@ package lrsms_util
 import (
   "container/list"
   "time"
-  "math/rand"
+  //"math/rand"
   "fmt"
   "strconv"
 )
@@ -18,18 +18,21 @@ type Resource struct{
   Depended *list.List //depended resource reference list
   CreateTime *time.Time //ResourceCache Created time
   Flag bool //True: some dependent resource is not ptodate
+  thePool ResourcePool //this is for ourself@@
 }
+
 //******************************************************************************
 //Public Static Functions
 //******************************************************************************
 func NewResource(uri string, depended *list.List, createTime *time.Time,
-  content []byte)*Resource{
+  content []byte, thePool ResourcePool)*Resource{
   var newR Resource
   newR.URI = uri
   newR.Content = content
   newR.Depended =  depended
   newR.CreateTime = createTime
   newR.Flag = false
+  newR.thePool = thePool
   return &newR
 }
 
@@ -44,8 +47,12 @@ func(r *Resource) Get() []byte{
 //make Resource update its info
 func(r *Resource) Update(){
    // run the resource update
+   r.Content =[]byte(r.URI)
+   for e := r.Depended.Front(); e != nil; e = e.Next() {
+     r.Content = append(r.Content, r.thePool[e.Value.(string)].Content...)
+   }
    //update will run ramdom from 0 to 2 sec in our experiment
-   time.Sleep(time.Second*time.Duration(rand.Intn(2)))
+   //time.Sleep(time.Second*time.Duration(rand.Intn(2)))
    r.Flag = false
 }
 
