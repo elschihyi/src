@@ -5,6 +5,7 @@ import (
 	"sync"
 	"container/list"
   "time"
+	"log"
 )
 //******************************************************************************
 // Types Definition
@@ -17,6 +18,13 @@ type LRSMS struct{
 //******************************************************************************
 //Public Functions
 //******************************************************************************
+func NewLRSMS ()*LRSMS{
+	var newLRSMS LRSMS
+  newLRSMS.ResourceRefs = make(map[string]*ResourceRef)
+  newLRSMS.Mutex = &sync.Mutex{}
+	return &newLRSMS
+}
+
 func (lrsms *LRSMS) CreateRef(uri string, depended *list.List,
 	 createTime *time.Time, getFunc Get, updateFunc Update, alertFunc Alert){
 	new_resource_ref := NewRF(uri, depended, createTime, getFunc, updateFunc,
@@ -27,13 +35,17 @@ func (lrsms *LRSMS) CreateRef(uri string, depended *list.List,
 		lrsms.ResourceRefs[e.Value.(string)].Dependent.PushBack(uri)
 	}
 	lrsms.Mutex.Unlock()
+	log.Printf("CreateRef: %v", uri)
 }
+
 func (lrsms *LRSMS) GetRef(uri string)*ResourceRef{
 	return lrsms.ResourceRefs[uri]
 }
+
 func (lrsms *LRSMS) GetResource(uri string)[]byte{
 	return lrsms.ResourceRefs[uri].Getfunc()
 }
+
 func (lrsms *LRSMS) DeleteRef(uri string){
 	if lrsms.ResourceRefs[uri].Dependent.Len() == 0 {
 		lrsms.Mutex.Lock()
@@ -41,6 +53,7 @@ func (lrsms *LRSMS) DeleteRef(uri string){
 		lrsms.Mutex.Unlock()
 	}
 }
+
 func (lrsms *LRSMS) RecieveUpdateFromInside(uri string){
 	//****************************************************************************
 	//***dont need to flag self***************************************************
