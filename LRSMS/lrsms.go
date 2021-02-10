@@ -5,7 +5,7 @@ import (
 	"sync"
 	"container/list"
   "time"
-	"log"
+	//"log"
 )
 //******************************************************************************
 // Types Definition
@@ -27,23 +27,25 @@ func NewLRSMS ()*LRSMS{
 
 func (lrsms *LRSMS) CreateRef(uri string, depended *list.List,
 	 createTime *time.Time, getFunc Get, updateFunc Update, alertFunc Alert){
+  //do nothing if resource info already exit
+	if _, exist := lrsms.ResourceRefs[uri]; exist {
+    return
+  }
+
 	new_resource_ref := NewRF(uri, depended, createTime, getFunc, updateFunc,
 		 alertFunc)
   lrsms.Mutex.Lock()
   lrsms.ResourceRefs[uri] = new_resource_ref
 	for e := depended.Front(); e != nil; e = e.Next() {
+		//log.Printf("LRSMS CreateRef depended : %v", e.Value.(string))
 		lrsms.ResourceRefs[e.Value.(string)].Dependent.PushBack(uri)
 	}
 	lrsms.Mutex.Unlock()
-	log.Printf("CreateRef: %v", uri)
-}
-
-func (lrsms *LRSMS) GetRef(uri string)*ResourceRef{
-	return lrsms.ResourceRefs[uri]
+	//log.Printf("LRSMS CreateRef: %v", uri)
 }
 
 func (lrsms *LRSMS) GetResource(uri string)[]byte{
-	return lrsms.ResourceRefs[uri].Getfunc()
+	return lrsms.ResourceRefs[uri].Getfunc(uri)
 }
 
 func (lrsms *LRSMS) DeleteRef(uri string){
@@ -54,7 +56,8 @@ func (lrsms *LRSMS) DeleteRef(uri string){
 	}
 }
 
-func (lrsms *LRSMS) RecieveUpdateFromInside(uri string){
+func (lrsms *LRSMS) RecieveUpdateFromInside(uri string, newTime *time.Time){
+   lrsms.ResourceRefs[uri].CreateTime = newTime
 	//****************************************************************************
 	//***dont need to flag self***************************************************
 	//lrsms.Mutex.Lock()
@@ -77,6 +80,14 @@ func (lrsms *LRSMS) RecieveUpdateFromInside(uri string){
 func (lrsms *LRSMS) RecieveUpdateFromOutside(uri string){
 }
 
+func (lrsms *LRSMS) GetRef(uri string)*ResourceRef{
+	return lrsms.ResourceRefs[uri]
+}
+
+//******************************************************************************
+//Public Functions (Operations)
+//******************************************************************************
+
 func (lrsms *LRSMS) CheckUpDate(uri string){
   //check if all depended resource are unflag
 	if lrsms.ResourceRefs[uri].Depended.Len() ==0{
@@ -88,7 +99,7 @@ func (lrsms *LRSMS) CheckUpDate(uri string){
 		}
 	}
 	//update resource
-	lrsms.ResourceRefs[uri].Updatefunc()
+	lrsms.ResourceRefs[uri].Updatefunc(uri)
 	//unflag
 	lrsms.Mutex.Lock()
 	lrsms.ResourceRefs[uri].Flag = false
@@ -105,7 +116,7 @@ func (lrsms *LRSMS) FlagPluxPropergate(uri string){
 	lrsms.ResourceRefs[uri].Flag = true
 	lrsms.Mutex.Unlock()
 	//Alert Resource
-	lrsms.ResourceRefs[uri].Alertfunc()
+	lrsms.ResourceRefs[uri].Alertfunc(uri)
 	//propergate up
 	for e := lrsms.ResourceRefs[uri].Dependent.Front(); e != nil; e = e.Next() {
 		lrsms.FlagPluxPropergate(e.Value.(string))

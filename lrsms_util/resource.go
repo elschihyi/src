@@ -6,6 +6,7 @@ import (
   //"math/rand"
   "fmt"
   "strconv"
+  "log"
 )
 
 //******************************************************************************
@@ -18,21 +19,19 @@ type Resource struct{
   Depended *list.List //depended resource reference list
   CreateTime *time.Time //ResourceCache Created time
   Flag bool //True: some dependent resource is not ptodate
-  thePool ResourcePool //this is for ourself@@
 }
 
 //******************************************************************************
 //Public Static Functions
 //******************************************************************************
 func NewResource(uri string, depended *list.List, createTime *time.Time,
-  content []byte, thePool ResourcePool)*Resource{
+  content []byte)*Resource{
   var newR Resource
   newR.URI = uri
   newR.Content = content
   newR.Depended =  depended
   newR.CreateTime = createTime
   newR.Flag = false
-  newR.thePool = thePool
   return &newR
 }
 
@@ -47,17 +46,15 @@ func(r *Resource) Get() []byte{
 //make Resource update its info
 func(r *Resource) Update(){
    // run the resource update
-   r.Content =[]byte(r.URI)
-   for e := r.Depended.Front(); e != nil; e = e.Next() {
-     r.Content = append(r.Content, r.thePool[e.Value.(string)].Content...)
-   }
-   //update will run ramdom from 0 to 2 sec in our experiment
-   //time.Sleep(time.Second*time.Duration(rand.Intn(2)))
+   r.Content =[]byte(r.URI + " update at: "+time.Now().Format(time.RFC3339))
+   //set flag to false
    r.Flag = false
+   log.Printf("Resource %v finished update, content is %v", r.URI, string(r.Content))
 }
 
 func(r *Resource) Alert(){
   r.Flag = true
+  log.Printf("Resource %v recieved update alert ", r.URI)
 }
 
 func (r *Resource) Print (){

@@ -11,9 +11,9 @@ import (
 // Types Definition
 //******************************************************************************
 
-type Get func()[]byte
-type Update func()
-type Alert func()
+type Get func(string)[]byte
+type Update func(string)
+type Alert func(string)
 
 type ResourceRef struct{
   URI string //identifier(URI)
@@ -59,6 +59,6 @@ func (rf *ResourceRef) Print (){
   }
   fmt.Println("")
   fmt.Println("  CreateTime: "+rf.CreateTime.String())
-  fmt.Println("  Cache: "+string(rf.Getfunc()))
+  fmt.Println("  Cache: "+string(rf.Getfunc(rf.URI)))
   fmt.Println("  Flag: "+strconv.FormatBool(rf.Flag))
 }
