@@ -141,13 +141,26 @@ func main() {
   UnConnectedDevices.Remove(myDevice2Ele)
   ConnectedDevices.PushBack(myDevice2)
   myDevice2.Connect(ConnectedDevices)
-
+  time.Sleep(2 * time.Second)
   //****************************************************************************
   //4. cross device updates
   //****************************************************************************
+	log.Printf("")
+  log.Printf("4. Cross Device Updates")
+
   //4.1 create resoruce
-  //4.2 delete resource
-  //4.3 update resource
+	r3CacheID := localhost+device2AppServPort+"/"+a3ID+"/"+"Resource3"
+  r3Cache_depended_list := list.New()
+  r3Cache_depended_list.PushBack(resource3.URI)
+  r3Cache :=  lrsms_util.NewResource(r3CacheID, r3Cache_depended_list,
+     resource3.CreateTime, resource3.Content)
+  myDevice2.CreateResource(a3ID, r3Cache)
+
+  //4.2 update resource
+	time.Sleep(2 * time.Second)
+  myDevice1.UpdateResource(a1ID, resource1.URI)
+
+	//4.3 delete resource
 
   //****************************************************************************
   //5. Disconnect device 2 update resource 1 than reconnect.  check sync

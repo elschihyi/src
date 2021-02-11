@@ -60,20 +60,20 @@ func (device Device) Connect(ConnectedDevices *list.List){
      sendCoAP(device.LRSMSServerPort, Dev, coap.POST, otherDevicejsonByte)
 
      //2. tell otherdevice a new device is connected
-     /*
      deviceURL := localhost+device.LRSMSServerPort
      mapDeviceURL := map[string]string{"LRSMSServerAddress": deviceURL}
      devicejsonByte, _ := json.Marshal(mapDeviceURL)
      sendCoAP(otherDevice.LRSMSServerPort, Dev, coap.POST, devicejsonByte)
-     */
 	}
 
   //device.Connected = true
 }
 
+/*
 func (device Device) Disconnect(){
   //device.Connected = false
 }
+*/
 
 func (device Device)AddApp(appID string){
   device.Apps[appID] = make(map[string]Resource)

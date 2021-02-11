@@ -28,7 +28,7 @@ const (
 //******************************************************************************
 func CoAPServerStart(port string){
   mylrsms := lrsms.NewLRSMS(GetDeviceRefs, SentRefs, GetResourceOtherDevice,
-		SentResource, UpdateCache)
+		SentResource, UpdateCache, SentDeviceRef)
 
   log.Fatal(coap.ListenAndServe("udp", port,
 		coap.FuncHandler(func(l *net.UDPConn, a *net.UDPAddr, m *coap.Message) *coap.Message {
@@ -49,14 +49,14 @@ func CoAPServerStart(port string){
         for _, s := range dependedArray {
           dependedList.PushBack(s.(string))
         }
-        mylrsms.CreateRef(payload["URI"].(string), dependedList,
+        mylrsms.CreateRef(payload["URI"].(string), localhost+port, dependedList,
 				payload["CreateTime"].(string), GetResource, Update, Alert)
         //log.Printf("in register resource")
       }
 
       //update Ref
 			if m.Path()[0] == Ref && m.Code == coap.PUT {
-			mylrsms.RecieveUpdateFromInside(payload["URI"].(string),
+			mylrsms.RecieveUpdateFromInside(payload["URI"].(string), localhost+port,
 				payload["CreateTime"].(string))
       }
 
@@ -137,6 +137,14 @@ func SentRefs(otherAdd string,  hostAdd string, simepleResourceRefs map[string]s
 	sendCoAP(otherAdd, Dev, coap.PUT,payload)
 }
 
+func SentDeviceRef(otherAdd string, hostAdd string, URI string, createTime string){
+	//log.Printf("SentDeviceRef %v %v %v %v ", otherAdd, hostAdd, URI, createTime)
+	sRR := &sentRefsResponse {
+    ToAddress:   hostAdd,
+    ResRefs:     map[string]string {URI:createTime}}
+	payload, _ := json.Marshal(sRR)
+	sendCoAP(otherAdd, Dev, coap.PUT,payload)
+}
 //******************************************************************************
 //Public Resource Call Back Functions
 //******************************************************************************

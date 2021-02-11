@@ -5,7 +5,7 @@ import (
 	"sync"
 	"container/list"
   "time"
-	//"log"
+	"log"
 )
 //******************************************************************************
 // Types Definition
@@ -15,6 +15,7 @@ type SentRefs func(string, string, map[string]string)
 type GetResource func(string, string, string)
 type SentResource func(string, string, string, string, string)
 type UpdateCache func(string, string, string)
+type SentDeviceRef func(string, string, string, string)
 
 type LRSMS struct{
 	ResourceRefs map[string]*ResourceRef
@@ -25,6 +26,7 @@ type LRSMS struct{
 	GetResourcefunc GetResource
 	SentResourcefunc SentResource
 	UpdateCachefunc UpdateCache
+	SentDeviceReffunc SentDeviceRef
 }
 
 //******************************************************************************
@@ -32,7 +34,7 @@ type LRSMS struct{
 //******************************************************************************
 func NewLRSMS (getDeviceRefsfunc GetDeviceRefs, sentRefsfunc SentRefs,
 	getResourcefunc GetResource, sentResourcefunc SentResource,
-	updateCachefunc UpdateCache)*LRSMS{
+	updateCachefunc UpdateCache, sentDeviceReffunc SentDeviceRef)*LRSMS{
 	var newLRSMS LRSMS
   newLRSMS.ResourceRefs = make(map[string]*ResourceRef)
 	newLRSMS.ConnectedDevRes = make (map[string]*list.List)
@@ -42,6 +44,7 @@ func NewLRSMS (getDeviceRefsfunc GetDeviceRefs, sentRefsfunc SentRefs,
 	newLRSMS.GetResourcefunc = getResourcefunc
 	newLRSMS.SentResourcefunc = sentResourcefunc
 	newLRSMS.UpdateCachefunc = updateCachefunc
+	newLRSMS.SentDeviceReffunc = sentDeviceReffunc
 	return &newLRSMS
 }
 
@@ -84,7 +87,7 @@ func (lrsms *LRSMS) UpdateResource(otherAdd string, hostAdd string,
 //Public Functions Ref
 //******************************************************************************
 
-func (lrsms *LRSMS) CreateRef(uri string, depended *list.List,
+func (lrsms *LRSMS) CreateRef(uri string, hostAdd string, depended *list.List,
 	 createTime string, getFunc Get, updateFunc Update, alertFunc Alert){
   //if resource info already exit
 	if _, exist := lrsms.ResourceRefs[uri]; exist {
@@ -101,9 +104,21 @@ func (lrsms *LRSMS) CreateRef(uri string, depended *list.List,
 	}
 	lrsms.Mutex.Unlock()
 	//log.Printf("LRSMS CreateRef: %v", uri)
+
+	//announce public
+	for k, _ := range lrsms.ConnectedDevRes{
+		if lrsms.IsCache(uri) {
+			lrsms.SentDeviceReffunc(k, hostAdd,
+				lrsms.ResourceRefs[uri].Depended.Front().Value.(string),
+				lrsms.ResourceRefs[uri].CreateTime)
+  	} else {
+			lrsms.SentDeviceReffunc(k, hostAdd, uri, lrsms.ResourceRefs[uri].CreateTime)
+		}
+	}
 }
 
-func (lrsms *LRSMS) RecieveUpdateFromInside(uri string, newTime string){
+func (lrsms *LRSMS) RecieveUpdateFromInside(uri string, hostAdd string,
+	newTime string){
 	//log.Printf("RecieveUpdateFromInside %v time %v", uri, newTime)
 	lrsms.Mutex.Lock()
 	//update Ref create time
@@ -140,6 +155,16 @@ func (lrsms *LRSMS) RecieveUpdateFromInside(uri string, newTime string){
 	for e := lrsms.ResourceRefs[uri].Dependent.Front(); e != nil; e = e.Next() {
 		lrsms.CheckUpDate(e.Value.(string))
 	}
+
+	//announce public
+	for k, v := range lrsms.ConnectedDevRes{
+		for e := v.Front(); e != nil; e = e.Next(){
+		  if	e.Value.(string) == uri{
+		 	  lrsms.SentDeviceReffunc(k, hostAdd, uri,
+			 	  lrsms.ResourceRefs[uri].CreateTime)
+		  }
+		}
+	}
 }
 
 func (lrsms *LRSMS) GetRefs(otherAdd string, hostAdd string){
@@ -171,12 +196,22 @@ func (lrsms *LRSMS)UpdateOtherDeviceRes(otherAdd string, hostAdd string,
 	resourceRefs map[string]interface{}){
 	//log.Printf("resourceRefs length %v", len(resourceRefs))
   //1. add other resourceID to ConnectedDevRes[otherAdd]
+	lrsms.Mutex.Lock()
 	for k, _ := range resourceRefs {
-		lrsms.Mutex.Lock()
-    lrsms.ConnectedDevRes[otherAdd].PushBack(k)
-		lrsms.Mutex.Unlock()
+    kInConnectedDevRes :=false
+		for e := lrsms.ConnectedDevRes[otherAdd].Front(); e != nil; e = e.Next() {
+			if e.Value.(string) == k {
+				kInConnectedDevRes = true
+				break
+			}
+		}
+		if !kInConnectedDevRes {
+    	lrsms.ConnectedDevRes[otherAdd].PushBack(k)
+		}
 		//log.Printf("push %v",k)
 	}
+	lrsms.Mutex.Unlock()
+
 	//2. compare create time and get updat for those outdated resources
 	for k, v := range resourceRefs { //check all resource in other device
 		for k2, v2 := range lrsms.ResourceRefs {
@@ -193,12 +228,6 @@ func (lrsms *LRSMS)UpdateOtherDeviceRes(otherAdd string, hostAdd string,
 }
 
 /*
-func (lrsms *LRSMS) Sync(){
-}
-
-func (lrsms *LRSMS) RecieveUpdateFromOutside(uri string){
-}
-
 func (lrsms *LRSMS) DeleteRef(uri string){
 	if lrsms.ResourceRefs[uri].Dependent.Len() == 0 {
 		lrsms.Mutex.Lock()
