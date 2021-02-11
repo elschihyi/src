@@ -8,7 +8,7 @@ import (
   "lrsms_coap"
   "math/rand"
   "encoding/json"
-  "time"
+  //"time"
 )
 
 type Device struct{
@@ -19,10 +19,9 @@ type Device struct{
 }
 
 const (
-  //modify connected device and resource
-  Dev string = "/Dev"
-  //modify resource info
-  Ref string ="/Ref"
+  Dev string = "Dev" //modify connected device and resource
+  Ref string = "Ref" //modify resource info
+	Res string = "Res" //modify resource
 )
 
 const (
@@ -44,11 +43,29 @@ func StartDevice(appServerPort string, lrsmsServerPort string)*Device{
 }
 
 func (device Device) Connect(ConnectedDevices *list.List){
+  //sync with all connected device
   for e := ConnectedDevices.Front(); e != nil; e = e.Next() {
-	   if e.Value.(*Device).LRSMSServerPort == device.LRSMSServerPort {
-       return
+    otherDevice := e.Value.(*Device)
+     //no need to sync with self
+	   if otherDevice.LRSMSServerPort == device.LRSMSServerPort {
+       break
      }
-     //make device sync with all connectedDevices
+
+     //make device sync with the otherDevice
+     //1. tell device a new Otherdevice is connected
+
+     otherDeviceURL := localhost+otherDevice.LRSMSServerPort
+     mapOtherDeviceURL := map[string]string{"LRSMSServerAddress": otherDeviceURL}
+     otherDevicejsonByte, _ := json.Marshal(mapOtherDeviceURL)
+     sendCoAP(device.LRSMSServerPort, Dev, coap.POST, otherDevicejsonByte)
+
+     //2. tell otherdevice a new device is connected
+     /*
+     deviceURL := localhost+device.LRSMSServerPort
+     mapDeviceURL := map[string]string{"LRSMSServerAddress": deviceURL}
+     devicejsonByte, _ := json.Marshal(mapDeviceURL)
+     sendCoAP(otherDevice.LRSMSServerPort, Dev, coap.POST, devicejsonByte)
+     */
 	}
 
   //device.Connected = true
@@ -64,18 +81,33 @@ func (device Device)AddApp(appID string){
 
 func (device Device)CreateResource(appID string, resource *Resource){
   device.Apps[appID][resource.URI] = *resource
+  //device.Apps[appID][resource.URI] = *resource
   sendCoAP(device.LRSMSServerPort, Ref, coap.POST,
     device.makeResourceJson(appID,*resource))
   log.Printf("Resource %v manual created in %v", resource.URI, appID)
 }
 
-func (device Device)UpdateResource(appID string, resourceID string,
-   newContent []byte){
+func (device Device)AlertResource(appID string, resourceID string){
   resource := device.Apps[appID][resourceID]
-  resource.Content = newContent
-  log.Printf("Resource %v manual update in %v", resource.URI, appID)
-  sendCoAP(device.LRSMSServerPort, Ref, coap.PUT,
-    device.makeResourceJson(appID,resource))
+  resource.Alert()
+}
+
+func (device Device)UpdateResource(appID string, resourceID string){
+  log.Printf("Resource %v in %v update", resourceID, appID)
+  resource := device.Apps[appID][resourceID]
+  resource.Update()
+  //log.Printf("Resource %v update in %v", resource.URI, appID)
+  sendCoAP(device.LRSMSServerPort, Ref, coap.PUT, device.makeResourceJson(appID ,resource))
+  //log.Printf("Resource %v manual update in %v", resource.URI, appID)
+}
+
+func (device Device)UpdateCacheResource(appID string, resourceID string,
+  createTime string, content string){
+  resource := device.Apps[appID][resourceID]
+  resource.Content = []byte(content)
+  resource.CreateTime = createTime
+  log.Printf("Resource %v update in %v", resource.URI, appID)
+  sendCoAP(device.LRSMSServerPort, Ref, coap.PUT, device.makeResourceJson(appID ,resource))
   //log.Printf("Resource %v manual update in %v", resource.URI, appID)
 }
 
@@ -105,15 +137,22 @@ func startAppServer(appServerPort string, myDevice *Device){
 			}
 
       if payload["Action"].(string) == "Alert" && m.Code == coap.PUT {
-        ResourceURI := localhost+appServerPort+"/"+m.Path()[0]+"/"+m.Path()[1]
-        resource := myDevice.Apps[m.Path()[0]][ResourceURI]
-        resource.Alert()
+        appID := m.Path()[0]
+        resourceID := localhost+appServerPort+"/"+m.Path()[0]+"/"+m.Path()[1]
+        go myDevice.AlertResource(appID, resourceID)
       }
 
       if payload["Action"].(string) == "Update" && m.Code == coap.PUT {
-        ResourceURI := localhost+appServerPort+"/"+m.Path()[0]+"/"+m.Path()[1]
-        resource := myDevice.Apps[m.Path()[0]][ResourceURI]
-        resource.Update()
+        appID := m.Path()[0]
+        resourceID := localhost+appServerPort+"/"+m.Path()[0]+"/"+m.Path()[1]
+        go myDevice.UpdateResource(appID, resourceID)
+      }
+
+      if payload["Action"].(string) == "UpdateCache" && m.Code == coap.PUT {
+        appID := m.Path()[0]
+        resourceID := localhost+appServerPort+"/"+m.Path()[0]+"/"+m.Path()[1]
+        go myDevice.UpdateCacheResource(appID, resourceID,
+          payload["CreateTime"].(string), payload["Content"].(string))
       }
 
       res := &coap.Message{
@@ -136,6 +175,7 @@ type resourceJson struct {
 }
 
 func (device Device) makeResourceJson(appID string, resource Resource)[]byte{
+  //log.Printf("appID %v reosuceID %v", appID, resource.URI)
   dependedArray := make([]string,resource.Depended.Len())
   i := 0
   for e := resource.Depended.Front(); e != nil; e = e.Next() {
@@ -145,7 +185,7 @@ func (device Device) makeResourceJson(appID string, resource Resource)[]byte{
   theResource := &resourceJson{
     URI :       resource.URI,
     Depended:   dependedArray,
-    CreateTime: resource.CreateTime.Format(time.RFC3339)}
+    CreateTime: resource.CreateTime}
   resourceJsonByte, _ := json.Marshal(theResource)
   return resourceJsonByte
 }
@@ -158,7 +198,7 @@ func sendCoAP(port string, path string, code coap.COAPCode, payload []byte){
 		Payload:   payload,
 	}
   req.SetPathString(path)
-	c, err := coap.Dial("udp", "localhost"+port)
+	c, err := coap.Dial("udp", localhost+port)
 	if err != nil {
 		log.Fatalf("Error dialing: %v", err)
 	}

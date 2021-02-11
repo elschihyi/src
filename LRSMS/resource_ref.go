@@ -2,9 +2,10 @@ package lrsms
 
 import (
   "container/list"
-  "time"
+  //"time"
   "fmt"
   "strconv"
+  //"log"
 )
 
 //******************************************************************************
@@ -19,18 +20,18 @@ type ResourceRef struct{
   URI string //identifier(URI)
   Depended *list.List  //depended resource reference list
   Dependent *list.List //dependent resource reference list
-  CreateTime *time.Time //ResourceCache Created time
+  CreateTime string //ResourceCache Created time
+  Flag bool //True: some dependent resource is not ptodate
   Getfunc Get //Get Resouce Cache
   Updatefunc Update //Update Resource
-  Flag bool //True: some dependent resource is not ptodate
   Alertfunc Alert //Alert Resource
 }
 
 //******************************************************************************
 //Public Static Functions
 //******************************************************************************
-func NewRF(uri string, depended *list.List, createTime *time.Time, getFunc Get,
-  updateFunc Update, alertFunc Alert) *ResourceRef{
+func NewRF(uri string, depended *list.List, createTime string,
+  getFunc Get, updateFunc Update, alertFunc Alert) *ResourceRef{
   var newRF ResourceRef
   newRF.URI = uri
   newRF.Depended = depended
@@ -46,6 +47,21 @@ func NewRF(uri string, depended *list.List, createTime *time.Time, getFunc Get,
 //******************************************************************************
 //Public Functions
 //******************************************************************************
+func (rf *ResourceRef)UpdateCreateTime(newTime string){
+  rf.CreateTime = newTime
+  //log.Printf("ResourceRef %v changed update time at %v", rf.URI, rf.CreateTime)
+}
+
+func (rf *ResourceRef)Flagg(){
+  rf.Flag = true
+  //log.Printf("ResourceRef %v flag", rf.URI)
+}
+
+func (rf *ResourceRef)Unflag(){
+  rf.Flag = false
+  //log.Printf("ResourceRef %v unflag", rf.URI)
+}
+
 func (rf *ResourceRef) Print (){
   fmt.Println(rf.URI)
   fmt.Print("  depended:")
@@ -58,7 +74,7 @@ func (rf *ResourceRef) Print (){
     fmt.Print(" "+e.Value.(string))
   }
   fmt.Println("")
-  fmt.Println("  CreateTime: "+rf.CreateTime.String())
-  fmt.Println("  Cache: "+string(rf.Getfunc(rf.URI)))
+  fmt.Println("  CreateTime: "+rf.CreateTime)
+  //fmt.Println("  Cache: "+string(rf.Getfunc(rf.URI)))
   fmt.Println("  Flag: "+strconv.FormatBool(rf.Flag))
 }
