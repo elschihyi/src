@@ -43,6 +43,7 @@ func StartDevice(appServerPort string, lrsmsServerPort string)*Device{
 }
 
 func (device Device) Connect(ConnectedDevices *list.List){
+  log.Printf("Device %v connected", localhost+device.AppServerPort)
   //sync with all connected device
   for e := ConnectedDevices.Front(); e != nil; e = e.Next() {
     otherDevice := e.Value.(*Device)
@@ -53,7 +54,6 @@ func (device Device) Connect(ConnectedDevices *list.List){
 
      //make device sync with the otherDevice
      //1. tell device a new Otherdevice is connected
-
      otherDeviceURL := localhost+otherDevice.LRSMSServerPort
      mapOtherDeviceURL := map[string]string{"LRSMSServerAddress": otherDeviceURL}
      otherDevicejsonByte, _ := json.Marshal(mapOtherDeviceURL)
@@ -65,15 +65,22 @@ func (device Device) Connect(ConnectedDevices *list.List){
      devicejsonByte, _ := json.Marshal(mapDeviceURL)
      sendCoAP(otherDevice.LRSMSServerPort, Dev, coap.POST, devicejsonByte)
 	}
-
   //device.Connected = true
 }
 
-/*
-func (device Device) Disconnect(){
-  //device.Connected = false
+
+func (device Device) Disconnect(ConnectedDevices *list.List){
+  log.Printf("Device %v Disconnected", localhost+device.AppServerPort)
+  for e := ConnectedDevices.Front(); e != nil; e = e.Next() {
+    otherDevice := e.Value.(*Device)
+    //otherDeviceURL := localhost+otherDevice.LRSMSServerPort
+    deviceURL := localhost+device.LRSMSServerPort
+    mapDeviceURL := map[string]string{"DeviceURL": deviceURL}
+    devicejsonByte, _ := json.Marshal(mapDeviceURL)
+    sendCoAP(otherDevice.LRSMSServerPort, Dev, coap.DELETE, devicejsonByte)
+  }
 }
-*/
+
 
 func (device Device)AddApp(appID string){
   device.Apps[appID] = make(map[string]Resource)
@@ -112,8 +119,10 @@ func (device Device)UpdateCacheResource(appID string, resourceID string,
 }
 
 func (device Device)DeleteResource(appID string, resourceID string){
-  delete(device.Apps[appID],resourceID)
-  sendCoAP(device.LRSMSServerPort, Ref, coap.DELETE,[]byte("{}"))
+  payload := device.makeResourceJson(appID ,device.Apps[appID][resourceID])
+  delete(device.Apps[appID], resourceID)
+  log.Printf("Resource %v deleted in %v", resourceID, appID)
+  sendCoAP(device.LRSMSServerPort, Ref, coap.DELETE,payload)
 }
 
 

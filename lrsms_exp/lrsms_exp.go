@@ -155,21 +155,52 @@ func main() {
   r3Cache :=  lrsms_util.NewResource(r3CacheID, r3Cache_depended_list,
      resource3.CreateTime, resource3.Content)
   myDevice2.CreateResource(a3ID, r3Cache)
+  time.Sleep(2 * time.Second)
 
   //4.2 update resource
-	time.Sleep(2 * time.Second)
   myDevice1.UpdateResource(a1ID, resource1.URI)
+  time.Sleep(2 * time.Second)
 
 	//4.3 delete resource
+  //myDevice2.DeleteResource(a3ID, r3CacheID)
+	myDevice2.DeleteResource(a3ID, r5ID)
+  time.Sleep(2 * time.Second)
 
-  //****************************************************************************
+	//4.4 update resource
+  myDevice1.UpdateResource(a1ID, resource1.URI)
+	time.Sleep(2 * time.Second)
+
+	//restore resource 5
+  myDevice2.CreateResource(a3ID, resource5)
+	time.Sleep(1 * time.Second)
+	//****************************************************************************
   //5. Disconnect device 2 update resource 1 than reconnect.  check sync
   //****************************************************************************
+	log.Printf("")
+  log.Printf("5. Disconnected")
+
+	//5.1. disconnect a device
+	ConnectedDevices.Remove(myDevice2Ele)
+  UnConnectedDevices.PushBack(myDevice2)
+  myDevice2.Disconnect(ConnectedDevices)
+  time.Sleep(2 * time.Second)
+
+	//5.2 update a resouce in connected deviceURL
+	myDevice1.UpdateResource(a1ID, resource1.URI)
+  time.Sleep(3 * time.Second)
 
 
+	//5.3 reconnect device
+	UnConnectedDevices.Remove(myDevice2Ele)
+  ConnectedDevices.PushBack(myDevice2)
+  myDevice2.Connect(ConnectedDevices)
+  time.Sleep(2 * time.Second)
 
+	//5.4 update a resource again
+	myDevice1.UpdateResource(a1ID, resource1.URI)
+  time.Sleep(2 * time.Second)
 
-  //****************************************************************************
+	//****************************************************************************
   //Halt
   //****************************************************************************
   //hault til user input e

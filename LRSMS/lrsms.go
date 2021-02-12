@@ -5,7 +5,7 @@ import (
 	"sync"
 	"container/list"
   "time"
-	"log"
+	//"log"
 )
 //******************************************************************************
 // Types Definition
@@ -16,6 +16,7 @@ type GetResource func(string, string, string)
 type SentResource func(string, string, string, string, string)
 type UpdateCache func(string, string, string)
 type SentDeviceRef func(string, string, string, string)
+type DeleteRef func (string, string, string)
 
 type LRSMS struct{
 	ResourceRefs map[string]*ResourceRef
@@ -27,6 +28,7 @@ type LRSMS struct{
 	SentResourcefunc SentResource
 	UpdateCachefunc UpdateCache
 	SentDeviceReffunc SentDeviceRef
+	DeleteReffunc DeleteRef
 }
 
 //******************************************************************************
@@ -34,7 +36,8 @@ type LRSMS struct{
 //******************************************************************************
 func NewLRSMS (getDeviceRefsfunc GetDeviceRefs, sentRefsfunc SentRefs,
 	getResourcefunc GetResource, sentResourcefunc SentResource,
-	updateCachefunc UpdateCache, sentDeviceReffunc SentDeviceRef)*LRSMS{
+	updateCachefunc UpdateCache, sentDeviceReffunc SentDeviceRef,
+	deleteReffunc DeleteRef)*LRSMS{
 	var newLRSMS LRSMS
   newLRSMS.ResourceRefs = make(map[string]*ResourceRef)
 	newLRSMS.ConnectedDevRes = make (map[string]*list.List)
@@ -45,6 +48,7 @@ func NewLRSMS (getDeviceRefsfunc GetDeviceRefs, sentRefsfunc SentRefs,
 	newLRSMS.SentResourcefunc = sentResourcefunc
 	newLRSMS.UpdateCachefunc = updateCachefunc
 	newLRSMS.SentDeviceReffunc = sentDeviceReffunc
+	newLRSMS.DeleteReffunc = deleteReffunc
 	return &newLRSMS
 }
 
@@ -180,9 +184,41 @@ func (lrsms *LRSMS) GetRefs(otherAdd string, hostAdd string){
 	}
 	lrsms.SentRefsfunc(otherAdd, hostAdd, simpleResourceRefs)
 }
+
+func (lrsms *LRSMS) DeleteRef(uri string, hostAdd string){
+  originURI := uri
+	if lrsms.IsCache(uri) {
+		originURI = lrsms.ResourceRefs[uri].Depended.Front().Value.(string)
+	} else {
+		for e := lrsms.ResourceRefs[uri].Depended.Front(); e != nil; e = e.Next(){
+			dependedResourceID := e.Value.(string)
+			for e2 := lrsms.ResourceRefs[dependedResourceID].Dependent.Front(); e2 != nil; e2 = e2.Next() {
+				if e2.Value.(string) == uri {
+					//log.Printf("remove dependent reosurce %v from %v dependent list", uri, dependedResourceID)
+					lrsms.ResourceRefs[dependedResourceID].Dependent.Remove(e2)
+					break
+				}
+			}
+		}
+	}
+
+  //remove depended's resource's dependent list
+	for e := lrsms.ResourceRefs[uri].Depended.Front(); e != nil; e = e.Next(){
+	}
+
+	if lrsms.ResourceRefs[uri].Dependent.Len() == 0 {
+		delete(lrsms.ResourceRefs, uri)
+	}
+
+	//announce public
+	for k, _ := range lrsms.ConnectedDevRes{
+		lrsms.DeleteReffunc(k, hostAdd, originURI)
+	}
+}
 //******************************************************************************
 //Public Functions Dev
 //******************************************************************************
+
 func (lrsms *LRSMS) NewDevice(otherAdd string, hostAdd string){
   //create new Device and request that device Resource
 	lrsms.Mutex.Lock()
@@ -227,16 +263,21 @@ func (lrsms *LRSMS)UpdateOtherDeviceRes(otherAdd string, hostAdd string,
 	}
 }
 
-/*
-func (lrsms *LRSMS) DeleteRef(uri string){
-	if lrsms.ResourceRefs[uri].Dependent.Len() == 0 {
-		lrsms.Mutex.Lock()
-		delete(lrsms.ResourceRefs,uri)
-		lrsms.Mutex.Unlock()
+func (lrsms *LRSMS) DeleteOtherDeviceRes (otherAdd string, URI string, hostAdd string){
+	for e := lrsms.ConnectedDevRes[otherAdd].Front(); e != nil; e = e.Next(){
+		if e.Value.(string) == URI {
+			//log.Printf("Delete %v in %v in ", URI, otherAdd, hostAdd)
+			lrsms.ConnectedDevRes[otherAdd].Remove(e)
+			break
+		}
 	}
 }
-*/
 
+func (lrsms *LRSMS) DeleteOtherDevice (otherAdd string) {
+	if _, exists := lrsms.ConnectedDevRes[otherAdd]; exists {
+		delete(lrsms.ConnectedDevRes, otherAdd)
+	}
+}
 //******************************************************************************
 //Public Functions
 //******************************************************************************
@@ -279,6 +320,7 @@ func (lrsms *LRSMS) Print(){
 //Public Untility Functions
 //******************************************************************************
 func (lrsms *LRSMS) IsCache(resourceID string)bool{
+	//.Printf("resourceID %v", resourceID)
 	resouceRef := lrsms.ResourceRefs[resourceID]
 	if resouceRef.Depended.Len() == 1 { //one depended
 		dependedResourceID := resouceRef.Depended.Front().Value.(string)

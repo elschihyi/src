@@ -28,7 +28,7 @@ const (
 //******************************************************************************
 func CoAPServerStart(port string){
   mylrsms := lrsms.NewLRSMS(GetDeviceRefs, SentRefs, GetResourceOtherDevice,
-		SentResource, UpdateCache, SentDeviceRef)
+		SentResource, UpdateCache, SentDeviceRef, DeleteRef)
 
   log.Fatal(coap.ListenAndServe("udp", port,
 		coap.FuncHandler(func(l *net.UDPConn, a *net.UDPAddr, m *coap.Message) *coap.Message {
@@ -95,6 +95,24 @@ func CoAPServerStart(port string){
 				payload["ContentString"].(string))
 			}
 
+      //delete resource Ref
+			if m.Path()[0] == Ref && m.Code == coap.DELETE {
+				//log.Printf("recieved delete resourceRefs at port: %v", port)
+		    mylrsms.DeleteRef(payload["URI"].(string), localhost+port)
+			}
+
+      //delete resource in dev's sec
+			if m.Path()[0] == Dev && m.Code == coap.DELETE {
+				//log.Printf("recieved delete resourceRefs at port: %v", port)
+				if _, exists := payload["ResourceURI"]; exists{
+		    	mylrsms.DeleteOtherDeviceRes(payload["ToAddress"].(string),
+					payload["ResourceURI"].(string), localhost+port)
+			  }
+				if _, exists := payload["DeviceURL"]; exists{
+		    	mylrsms.DeleteOtherDevice(payload["DeviceURL"].(string))
+			  }
+			}
+
 			//print lrsms
 			if m.Code == coap.Content {
 				mylrsms.Print()
@@ -143,7 +161,13 @@ func SentDeviceRef(otherAdd string, hostAdd string, URI string, createTime strin
     ToAddress:   hostAdd,
     ResRefs:     map[string]string {URI:createTime}}
 	payload, _ := json.Marshal(sRR)
-	sendCoAP(otherAdd, Dev, coap.PUT,payload)
+	sendCoAP(otherAdd, Dev, coap.PUT, payload)
+}
+
+func DeleteRef(otherAdd string, hostAdd string, URI string){
+	mapD := map[string]string{"ToAddress": hostAdd, "ResourceURI":URI}
+	payload, _ := json.Marshal(mapD)
+	sendCoAP(otherAdd, Dev, coap.DELETE, payload)
 }
 //******************************************************************************
 //Public Resource Call Back Functions
