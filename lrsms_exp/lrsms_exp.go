@@ -8,7 +8,6 @@ import (
   "lrsms_util"
   "fmt"
   "time"
-	//"github.com/dustin/go-coap"
 )
 
 const(
@@ -90,11 +89,9 @@ func main() {
   log.Printf("2. Update")
 
   time.Sleep(2 * time.Second)
-
   myDevice1.UpdateResource(a1ID, resource1.URI)
 
-  //time.Sleep(4 * time.Second)
-
+  time.Sleep(2 * time.Second)
   myDevice1.UpdateResource(a2ID, resource3.URI)
 
   //printLRSMS(device1LRSNSServPort)
@@ -210,12 +207,6 @@ func main() {
     //fmt.Println("Hello", name)
   }
 }//end main
-
-func connectDevice(device lrsms_util.Device){
-}
-
-func disConnectDevice(device lrsms_util.Device){
-}
 
 func printLRSMS(port string){
   req := coap.Message{

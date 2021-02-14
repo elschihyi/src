@@ -7,10 +7,8 @@ import (
   "lrsms"
   "container/list"
   "encoding/json"
-  //"time"
 	"regexp"
 	"math/rand"
-	//"github.com/dustin/go-coap"
 )
 
 const (
@@ -49,48 +47,49 @@ func CoAPServerStart(port string){
         for _, s := range dependedArray {
           dependedList.PushBack(s.(string))
         }
-        mylrsms.CreateRef(payload["URI"].(string), localhost+port, dependedList,
+        go mylrsms.CreateRef(payload["URI"].(string), localhost+port, dependedList,
 				payload["CreateTime"].(string), GetResource, Update, Alert)
         //log.Printf("in register resource")
       }
 
       //update Ref
 			if m.Path()[0] == Ref && m.Code == coap.PUT {
-			mylrsms.RecieveUpdateFromInside(payload["URI"].(string), localhost+port,
-				payload["CreateTime"].(string))
+				//log.Printf("@@update Ref at port: %v", port)
+			  go mylrsms.RecieveUpdateFromInside(payload["URI"].(string), localhost+port,
+				  payload["CreateTime"].(string))
       }
 
       //create new connected device
       if m.Path()[0] == Dev && m.Code == coap.POST {
 				//payload["LRSMSServerAddress"].(string)
-				//slog.Printf("Recieved new Device at port: %v", port)
-		    mylrsms.NewDevice(payload["LRSMSServerAddress"].(string), localhost+port)
+				//log.Printf("Recieved new Device at port: %v", port)
+		    go mylrsms.NewDevice(payload["LRSMSServerAddress"].(string), localhost+port)
 			}
 
 			//get resourceRefs list and its create Time
 			if m.Path()[0] == Ref && m.Code == coap.GET {
 				//log.Printf("recieved want resourceRefs at port: %v", port)
-		    mylrsms.GetRefs(payload["ToAddress"].(string), localhost+port)
+		    go mylrsms.GetRefs(payload["ToAddress"].(string), localhost+port)
 			}
 
       //update connected device Resources and compare createtime
 			if m.Path()[0] == Dev && m.Code == coap.PUT {
 				//log.Printf("Recieved resourceRefs at port: %v", port)
-				mylrsms.UpdateOtherDeviceRes(payload["ToAddress"].(string),
+				go mylrsms.UpdateOtherDeviceRes(payload["ToAddress"].(string),
 				localhost+port, payload["ResRefs"].(map[string]interface{}))
 			}
 
 			//get Resouce Cache
 			if m.Path()[0] == Res && m.Code == coap.GET {
 				//log.Printf("Recieved want Resource at port: %v", port)
-				mylrsms.GetResource(payload["ToAddress"].(string), localhost+port,
+				go mylrsms.GetResource(payload["ToAddress"].(string), localhost+port,
 				payload["ResourceURI"].(string))
 			}
 
       //update resource
 			if m.Path()[0] == Res && m.Code == coap.PUT {
 				//log.Printf("Recieved update Resource at port: %v", port)
-				mylrsms.UpdateResource(payload["ToAddress"].(string), localhost+port,
+				go mylrsms.UpdateResource(payload["ToAddress"].(string), localhost+port,
 				payload["ResourceURI"].(string), payload["CreateTime"].(string),
 				payload["ContentString"].(string))
 			}
@@ -98,24 +97,24 @@ func CoAPServerStart(port string){
       //delete resource Ref
 			if m.Path()[0] == Ref && m.Code == coap.DELETE {
 				//log.Printf("recieved delete resourceRefs at port: %v", port)
-		    mylrsms.DeleteRef(payload["URI"].(string), localhost+port)
+		    go mylrsms.DeleteRef(payload["URI"].(string), localhost+port)
 			}
 
       //delete resource in dev's sec
 			if m.Path()[0] == Dev && m.Code == coap.DELETE {
 				//log.Printf("recieved delete resourceRefs at port: %v", port)
 				if _, exists := payload["ResourceURI"]; exists{
-		    	mylrsms.DeleteOtherDeviceRes(payload["ToAddress"].(string),
+		    	go mylrsms.DeleteOtherDeviceRes(payload["ToAddress"].(string),
 					payload["ResourceURI"].(string), localhost+port)
 			  }
 				if _, exists := payload["DeviceURL"]; exists{
-		    	mylrsms.DeleteOtherDevice(payload["DeviceURL"].(string))
+		    	go mylrsms.DeleteOtherDevice(payload["DeviceURL"].(string))
 			  }
 			}
 
 			//print lrsms
 			if m.Code == coap.Content {
-				mylrsms.Print()
+				go mylrsms.Print()
       }
 
       res := &coap.Message{

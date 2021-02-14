@@ -8,14 +8,14 @@ import (
   "lrsms_coap"
   "math/rand"
   "encoding/json"
-  //"time"
+  "time"
 )
 
 type Device struct{
   Apps map[string]map[string]Resource  //[appID]map[resourceID]Resource
   AppServerPort string
   LRSMSServerPort string
-  //Connected bool
+  Channel chan interface{}
 }
 
 const (
@@ -39,6 +39,7 @@ func StartDevice(appServerPort string, lrsmsServerPort string)*Device{
   //nDevice.Connected = false
   go startLRSMS(lrsmsServerPort) //start lrsms
   go startAppServer(appServerPort, &nDevice) //start StartAppServer
+  //log.Printf("Device %v started", localhost+nDevice.AppServerPort)
   return &nDevice
 }
 
@@ -70,7 +71,7 @@ func (device Device) Connect(ConnectedDevices *list.List){
 
 
 func (device Device) Disconnect(ConnectedDevices *list.List){
-  log.Printf("Device %v Disconnected", localhost+device.AppServerPort)
+  //log.Printf("Device %v Disconnected", localhost+device.AppServerPort)
   for e := ConnectedDevices.Front(); e != nil; e = e.Next() {
     otherDevice := e.Value.(*Device)
     //otherDeviceURL := localhost+otherDevice.LRSMSServerPort
@@ -81,7 +82,6 @@ func (device Device) Disconnect(ConnectedDevices *list.List){
   }
 }
 
-
 func (device Device)AddApp(appID string){
   device.Apps[appID] = make(map[string]Resource)
 }
@@ -91,7 +91,7 @@ func (device Device)CreateResource(appID string, resource *Resource){
   //device.Apps[appID][resource.URI] = *resource
   sendCoAP(device.LRSMSServerPort, Ref, coap.POST,
     device.makeResourceJson(appID,*resource))
-  log.Printf("Resource %v manual created in %v", resource.URI, appID)
+  //log.Printf("Resource %v manual created in %v", resource.URI, appID)
 }
 
 func (device Device)AlertResource(appID string, resourceID string){
@@ -100,12 +100,13 @@ func (device Device)AlertResource(appID string, resourceID string){
 }
 
 func (device Device)UpdateResource(appID string, resourceID string){
-  log.Printf("Resource %v in %v update", resourceID, appID)
+  //log.Printf("Resource %v in %v update", resourceID, appID)
   resource := device.Apps[appID][resourceID]
   resource.Update()
-  //log.Printf("Resource %v update in %v", resource.URI, appID)
   sendCoAP(device.LRSMSServerPort, Ref, coap.PUT, device.makeResourceJson(appID ,resource))
-  //log.Printf("Resource %v manual update in %v", resource.URI, appID)
+  if (device.Channel != nil){
+    device.Channel <- time.Now()
+  }
 }
 
 func (device Device)UpdateCacheResource(appID string, resourceID string,
@@ -124,7 +125,6 @@ func (device Device)DeleteResource(appID string, resourceID string){
   log.Printf("Resource %v deleted in %v", resourceID, appID)
   sendCoAP(device.LRSMSServerPort, Ref, coap.DELETE,payload)
 }
-
 
 //******************************************************************************
 //Private Functions

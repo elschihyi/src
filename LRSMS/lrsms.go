@@ -157,6 +157,7 @@ func (lrsms *LRSMS) RecieveUpdateFromInside(uri string, hostAdd string,
 	//****************************************************************************
 	//signal all dependent resource check update
 	for e := lrsms.ResourceRefs[uri].Dependent.Front(); e != nil; e = e.Next() {
+		//log.Printf("@@RecieveUpdateFromInside: signal %v to update", e.Value.(string))
 		lrsms.CheckUpDate(e.Value.(string))
 	}
 

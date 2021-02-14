@@ -3,10 +3,9 @@ package lrsms_util
 import (
   "container/list"
   "time"
-  //"math/rand"
   "fmt"
   "strconv"
-  "log"
+  //"log"
 )
 
 //******************************************************************************
@@ -46,18 +45,18 @@ func(r *Resource) Get() []byte{
 //make Resource update its info
 func(r *Resource) Update(){
   //time.Sleep(2 * time.Second)
+
   // run the resource update
   r.Content =[]byte(r.URI + " update at: "+time.Now().Format(time.RFC3339))
   r.CreateTime = time.Now().Format(time.RFC3339)
   //set flag to false
   r.Flag = false
-  //log.Printf("Resource %v finished update, creatTime is %v", r.URI, r.CreateTime)
-  log.Printf("Resource %v finished update at %v", r.URI, r.CreateTime)
+  //log.Printf("Resource %v finished update at %v", r.URI, r.CreateTime)
 }
 
 func(r *Resource) Alert(){
   r.Flag = true
-  log.Printf("Resource %v recieved update alert at %v", r.URI, time.Now().Format(time.RFC3339))
+  //log.Printf("Resource %v recieved update alert at %v", r.URI, time.Now().Format(time.RFC3339))
 }
 
 func (r *Resource) Print (){
