@@ -1,3 +1,5 @@
+//go tool pprof --pdf lrsms_exp1_1.exe cpu.pprof > exp1_1_cup.pdf
+
 package main
 
 import (
@@ -11,18 +13,19 @@ import (
   "os"
   "log"
   "math"
+  //"profile"
 )
 
 const(
-  fileName string = "Exp5_1_1.csv"
+  fileName string = "exp1_1.csv"
   localhost string = "localhost"
   initialPort int = 5700
   deviceNum int = 1
   appIDNum int = 1
-  iterations int = 30
-  minResourceNum int = 50
-  ResourceNumIncrement int = 50
-  MaxResourceNum int = 300
+  iterations int = 3
+  minResourceNum int = 100
+  ResourceNumIncrement int = 100
+  MaxResourceNum int = 500
 )
 
 var ConnectedDevices *list.List
@@ -32,8 +35,13 @@ var AppIDs []string
 var Resources []*lrsms_util.Resource
 
 func main() {
+  time.Sleep(5 * time.Second)
+  //start Profile
+  //defer profile.Start().Stop()
+  //defer profile.Start(profile.MemProfile).Stop()
+
   //initail out put file
-  f, _ := os.Create(fileName+"_"+strconv.Itoa(iterations))
+  f, _ := os.Create(fileName)
   defer f.Close()
   f.WriteString("resource#, MinRunTime(Nanosecond), MaxRuntime, AverageRunTime\n")
 
