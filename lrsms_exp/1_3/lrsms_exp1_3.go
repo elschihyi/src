@@ -1,5 +1,3 @@
-//go tool pprof --pdf lrsms_exp1_1.exe cpu.pprof > exp1_1_cup.pdf
-
 package main
 
 import (
@@ -17,15 +15,15 @@ import (
 )
 
 const(
-  fileName string = "exp1_1.csv"
+  fileName string = "exp1_3.csv"
   localhost string = "localhost"
   initialPort int = 5700
   deviceNum int = 1
   appIDNum int = 1
-  iterations int = 10
-  minResourceNum int = 50
-  ResourceNumIncrement int = 50
-  MaxResourceNum int = 300
+  iterations int = 30
+  minResourceNum int = 63
+  ResourceNumIncrement int = 2
+  MaxResourceNum int = 1023
 )
 
 var ConnectedDevices *list.List
@@ -52,7 +50,8 @@ func main() {
   Devices[0].AddApp(AppIDs[0])
 
   // run it
-  for resourceNum := minResourceNum; resourceNum <= MaxResourceNum;resourceNum += ResourceNumIncrement{
+  for resourceNum := minResourceNum; resourceNum <= MaxResourceNum;
+  resourceNum = (resourceNum * ResourceNumIncrement) +1 {
     Resources = make([]*lrsms_util.Resource, resourceNum)
     resourceUpdateChannel := make (chan interface{},resourceNum)
     Devices[0].Channel = resourceUpdateChannel
@@ -62,7 +61,7 @@ func main() {
       resourceID := "Resource"+strconv.Itoa(i+1)
       dependedRes := list.New()
       if i != 0 {
-        dependedResID := localhost+Devices[0].AppServerPort +"/"+AppIDs[0]+"/"+"Resource"+strconv.Itoa(i)
+        dependedResID := Resources[(i-1)/2].URI
         dependedRes.PushBack(dependedResID)
       }
       Resources[i] = initResource(Devices[0].AppServerPort, AppIDs[0], resourceID,
@@ -114,7 +113,6 @@ func main() {
   for input := "";input!="e";{
     fmt.Println("Enter 'e' to terminate")
     fmt.Scanf("%s", &input)
-    //fmt.Println("Hello", name)
   }
 }
 

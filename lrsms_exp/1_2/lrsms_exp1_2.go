@@ -1,5 +1,3 @@
-//go tool pprof --pdf lrsms_exp1_1.exe cpu.pprof > exp1_1_cup.pdf
-
 package main
 
 import (
@@ -17,15 +15,15 @@ import (
 )
 
 const(
-  fileName string = "exp1_1.csv"
+  fileName string = "exp1_2.csv"
   localhost string = "localhost"
   initialPort int = 5700
   deviceNum int = 1
   appIDNum int = 1
-  iterations int = 10
-  minResourceNum int = 50
+  iterations int = 30
+  minResourceNum int = 51
   ResourceNumIncrement int = 50
-  MaxResourceNum int = 300
+  MaxResourceNum int = 501
 )
 
 var ConnectedDevices *list.List
@@ -62,7 +60,7 @@ func main() {
       resourceID := "Resource"+strconv.Itoa(i+1)
       dependedRes := list.New()
       if i != 0 {
-        dependedResID := localhost+Devices[0].AppServerPort +"/"+AppIDs[0]+"/"+"Resource"+strconv.Itoa(i)
+        dependedResID := Resources[0].URI
         dependedRes.PushBack(dependedResID)
       }
       Resources[i] = initResource(Devices[0].AppServerPort, AppIDs[0], resourceID,
@@ -97,10 +95,13 @@ func main() {
       log.Printf("%d itertaion %d done", resourceNum, (i2+1))
       time.Sleep(200 * time.Millisecond)
     }
+
     AverageRunTime  := int64(TotalRunTime)/int64(iterations)
+
     minRunTime /= 1000000
     MaxRunTime /= 1000000
     AverageRunTime /= 1000000
+
     f.WriteString(strconv.Itoa(resourceNum) + ", " +
      strconv.FormatInt(int64(minRunTime), 10) + ", " +
      strconv.FormatInt(int64(AverageRunTime), 10) + ", " +
@@ -114,7 +115,6 @@ func main() {
   for input := "";input!="e";{
     fmt.Println("Enter 'e' to terminate")
     fmt.Scanf("%s", &input)
-    //fmt.Println("Hello", name)
   }
 }
 

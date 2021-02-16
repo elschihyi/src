@@ -88,7 +88,6 @@ func (device Device)AddApp(appID string){
 
 func (device Device)CreateResource(appID string, resource *Resource){
   device.Apps[appID][resource.URI] = *resource
-  //device.Apps[appID][resource.URI] = *resource
   sendCoAP(device.LRSMSServerPort, Ref, coap.POST,
     device.makeResourceJson(appID,*resource))
   //log.Printf("Resource %v manual created in %v", resource.URI, appID)
@@ -185,7 +184,7 @@ type resourceJson struct {
 
 func (device Device) makeResourceJson(appID string, resource Resource)[]byte{
   //log.Printf("appID %v reosuceID %v", appID, resource.URI)
-  dependedArray := make([]string,resource.Depended.Len())
+  dependedArray := make([]string, resource.Depended.Len())
   i := 0
   for e := resource.Depended.Front(); e != nil; e = e.Next() {
     dependedArray[i]=e.Value.(string)
