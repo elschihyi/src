@@ -14,15 +14,15 @@ import (
 )
 
 const(
-  fileName string = "exp2_1.csv"
+  fileName string = "exp2_3.csv"
   localhost string = "localhost"
   initialPort int = 5700
   deviceNum int = 1
   //appIDNum int = 1
-  iterations int = 10
-  minResourceNum int = 50
-  ResourceNumIncrement int = 50
-  MaxResourceNum int = 300
+  iterations int = 30
+  minResourceNum int = 63
+  ResourceNumIncrement int = 2
+  MaxResourceNum int = 1023
 )
 
 var ConnectedDevices *list.List
@@ -46,7 +46,8 @@ func main() {
   initi(deviceNum)
 
   // run it
-  for resourceNum := minResourceNum; resourceNum <= MaxResourceNum; resourceNum += ResourceNumIncrement{
+  for resourceNum := minResourceNum; resourceNum <= MaxResourceNum;
+ resourceNum = (resourceNum * ResourceNumIncrement) +1 {
     //init AppIDs
     AppIDs = make([]string, resourceNum)
     for j := 0; j < resourceNum; j++ {
@@ -61,9 +62,9 @@ func main() {
     //init resources
     for i := 0; i < resourceNum; i++{
       if i != 0 {
-        CacheResourceID := "Resource"+strconv.Itoa(i)
+        CacheResourceID := "Resource"+strconv.Itoa(((i+1)/2))
         CacheDependedRes := list.New()
-        CacheDependedResID := Resources[(2*i-2)].URI
+        CacheDependedResID := localhost+Devices[0].AppServerPort +"/"+AppIDs[((i-1)/2)]+"/"+"Resource"+strconv.Itoa(((i+1)/2))
         CacheDependedRes.PushBack(CacheDependedResID)
         Resources[(2*i-1)] = initResource(Devices[0].AppServerPort, AppIDs[i],
            CacheResourceID, CacheDependedRes)
@@ -73,7 +74,7 @@ func main() {
       resourceID := "Resource"+strconv.Itoa(i+1)
       dependedRes := list.New()
       if i != 0 {
-        dependedResID := localhost+Devices[0].AppServerPort +"/"+AppIDs[i]+"/"+"Resource"+strconv.Itoa(i)
+        dependedResID := localhost+Devices[0].AppServerPort +"/"+AppIDs[i]+"/"+"Resource"+strconv.Itoa(((i+1)/2))
         dependedRes.PushBack(dependedResID)
       }
       Resources[2*i] = initResource(Devices[0].AppServerPort, AppIDs[i], resourceID,
@@ -107,7 +108,7 @@ func main() {
       }
       TotalRunTime += duration
       log.Printf("%d itertaion %d done", resourceNum, (i2+1))
-      time.Sleep(200 * time.Millisecond)
+      time.Sleep(500 * time.Millisecond)
     }
     AverageRunTime  := int64(TotalRunTime)/int64(iterations)
     minRunTime /= 1000000

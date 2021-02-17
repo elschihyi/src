@@ -14,15 +14,15 @@ import (
 )
 
 const(
-  fileName string = "exp2_1.csv"
+  fileName string = "exp2_2.csv"
   localhost string = "localhost"
   initialPort int = 5700
   deviceNum int = 1
   //appIDNum int = 1
-  iterations int = 10
-  minResourceNum int = 50
+  iterations int = 30
+  minResourceNum int = 51
   ResourceNumIncrement int = 50
-  MaxResourceNum int = 300
+  MaxResourceNum int = 501
 )
 
 var ConnectedDevices *list.List
@@ -63,7 +63,7 @@ func main() {
       if i != 0 {
         CacheResourceID := "Resource"+strconv.Itoa(i)
         CacheDependedRes := list.New()
-        CacheDependedResID := Resources[(2*i-2)].URI
+        CacheDependedResID := Resources[0].URI
         CacheDependedRes.PushBack(CacheDependedResID)
         Resources[(2*i-1)] = initResource(Devices[0].AppServerPort, AppIDs[i],
            CacheResourceID, CacheDependedRes)

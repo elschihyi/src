@@ -14,10 +14,10 @@ import (
 )
 
 const(
-  fileName string = "exp2_1.csv"
+  fileName string = "exp3_1.csv"
   localhost string = "localhost"
   initialPort int = 5700
-  deviceNum int = 1
+  //deviceNum int = 1
   //appIDNum int = 1
   iterations int = 10
   minResourceNum int = 50
@@ -28,6 +28,7 @@ const(
 var ConnectedDevices *list.List
 var UnConnectedDevices *list.List
 var Devices []*lrsms_util.Device
+var resourceUpdateChannels []chan interface{}
 var AppIDs []string
 var Resources []*lrsms_util.Resource
 
@@ -42,61 +43,104 @@ func main() {
   defer f.Close()
   f.WriteString(", MinRunTime, AverageRunTime, MaxRuntime\n")
 
-  //init Devices
-  initi(deviceNum)
+  //init device connection list
+  ConnectedDevices = list.New()
+  UnConnectedDevices = list.New()
+  Devices = make([]*lrsms_util.Device, MaxResourceNum)
+  resourceUpdateChannels = make ([]chan interface{}, MaxResourceNum)
+  AppIDs = make([]string, MaxResourceNum)
+  Resources = make([]*lrsms_util.Resource, MaxResourceNum*2-1)
 
   // run it
   for resourceNum := minResourceNum; resourceNum <= MaxResourceNum; resourceNum += ResourceNumIncrement{
-    //init AppIDs
-    AppIDs = make([]string, resourceNum)
-    for j := 0; j < resourceNum; j++ {
-      AppIDs[j] = "app"+strconv.Itoa(j+1)
-      Devices[0].AddApp(AppIDs[j])
+    //init Devices & init AppIDs
+    k := 0
+    if resourceNum != minResourceNum{
+      k = resourceNum - ResourceNumIncrement
     }
 
-    Resources = make([]*lrsms_util.Resource, resourceNum*2-1)
-    resourceUpdateChannel := make (chan interface{}, resourceNum*2-1)
-    Devices[0].Channel = resourceUpdateChannel
+    for ; k < resourceNum; k++ {
+      deviceAppServPort := initialPort + k*2
+      deviceLRSNSServPort := initialPort + k * 2 + 1
+      deviceAppServPortString := ":" + strconv.Itoa(deviceAppServPort)
+      deviceLRSNSServPortString := ":" + strconv.Itoa(deviceLRSNSServPort)
+      Devices[k] = lrsms_util.StartDevice(deviceAppServPortString,
+        deviceLRSNSServPortString)
+
+      if k==0 {
+        resourceUpdateChannels[k] = make (chan interface{}, 1)
+      } else {
+        resourceUpdateChannels[k] = make (chan interface{}, 2)
+      }
+      Devices[k].Channel = resourceUpdateChannels[k]
+      AppIDs[k] = "app"+strconv.Itoa(k+1)
+      Devices[k].AddApp(AppIDs[k])
+    }
+
+    i := 0
+    if resourceNum != minResourceNum{
+      i = resourceNum - ResourceNumIncrement
+    }
 
     //init resources
-    for i := 0; i < resourceNum; i++{
+    for ; i < resourceNum; i++{
       if i != 0 {
         CacheResourceID := "Resource"+strconv.Itoa(i)
         CacheDependedRes := list.New()
         CacheDependedResID := Resources[(2*i-2)].URI
         CacheDependedRes.PushBack(CacheDependedResID)
-        Resources[(2*i-1)] = initResource(Devices[0].AppServerPort, AppIDs[i],
+        Resources[(2*i-1)] = initResource(Devices[i].AppServerPort, AppIDs[i],
            CacheResourceID, CacheDependedRes)
-        Devices[0].CreateResource(AppIDs[i], Resources[(2*i-1)])
+        Devices[i].CreateResource(AppIDs[i], Resources[(2*i-1)])
       }
 
       resourceID := "Resource"+strconv.Itoa(i+1)
       dependedRes := list.New()
       if i != 0 {
-        dependedResID := localhost+Devices[0].AppServerPort +"/"+AppIDs[i]+"/"+"Resource"+strconv.Itoa(i)
+        dependedResID := localhost+Devices[i].AppServerPort +"/"+AppIDs[i]+"/"+"Resource"+strconv.Itoa(i)
         dependedRes.PushBack(dependedResID)
       }
-      Resources[2*i] = initResource(Devices[0].AppServerPort, AppIDs[i], resourceID,
+      Resources[2*i] = initResource(Devices[i].AppServerPort, AppIDs[i], resourceID,
          dependedRes)
 
       //Add resource to device/apps
-      Devices[0].CreateResource(AppIDs[i], Resources[2*i])
+      Devices[i].CreateResource(AppIDs[i], Resources[2*i])
+      ConnectedDevices.PushBack(Devices[i])
+      Devices[i].Connect(ConnectedDevices)
     }
 
-    //printLRSMS(Devices[0].LRSMSServerPort)
+    /*
+    for k := 0; k < len(Devices) ; k++ {
+      printLRSMS(Devices[k].LRSMSServerPort)
+    }
+
+    for input := "";input!="e";{
+      fmt.Println("Enter 'e' to terminate")
+      fmt.Scanf("%s", &input)
+      //fmt.Println("Hello", name)
+    }
+    */
 
     //iterations
     var minRunTime time.Duration = math.MaxInt64
     var MaxRunTime time.Duration = 0
     var TotalRunTime time.Duration = 0
     for i2 := 0; i2 < iterations; i2++ {
+      time.Sleep(1000 * time.Millisecond)
       startTime := time.Now()
       //update first resource and see how long it take to reach last resource
       Devices[0].UpdateResource(AppIDs[0], Resources[0].URI)
       endTime := time.Now()
-      for i3 := 0; i3 < resourceNum*2-1; i3++ {
-        MychanelTtem := <- resourceUpdateChannel
-    		endTime = MychanelTtem.(time.Time)
+      for i3 := 0; i3 < resourceNum; i3++ {
+        if i3==0 {
+          MychanelTtem := <- resourceUpdateChannels[i3]
+    		  endTime = MychanelTtem.(time.Time)
+        }else{
+          MychanelTtem := <- resourceUpdateChannels[i3]
+    		  endTime = MychanelTtem.(time.Time)
+          MychanelTtem = <- resourceUpdateChannels[i3]
+    		  endTime = MychanelTtem.(time.Time)
+        }
     	}
       duration := endTime.Sub(startTime)
       if duration < minRunTime {
@@ -130,10 +174,12 @@ func main() {
   }
 }
 
+/*
 func initi(deviceNum int){
   ConnectedDevices = list.New()
   UnConnectedDevices = list.New()
   Devices = make([]*lrsms_util.Device, deviceNum)
+  resourceUpdateChannels = make ([]chan interface{}, deviceNum)
 
   i := 0
   //init Devices
@@ -144,8 +190,17 @@ func initi(deviceNum int){
     deviceLRSNSServPortString := ":" + strconv.Itoa(deviceLRSNSServPort)
     Devices[i] = lrsms_util.StartDevice(deviceAppServPortString,
       deviceLRSNSServPortString)
+
+    if i==0 {
+      resourceUpdateChannels[i] = make (chan interface{}, 1)
+    } else {
+      resourceUpdateChannels[i] = make (chan interface{}, 2)
+    }
+    Devices[i].Channel = resourceUpdateChannels[i]
   }
 }
+*/
+
 
 //init resoruce
 func initResource(deviceAppServPort string, appID string,

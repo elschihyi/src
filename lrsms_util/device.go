@@ -44,7 +44,7 @@ func StartDevice(appServerPort string, lrsmsServerPort string)*Device{
 }
 
 func (device Device) Connect(ConnectedDevices *list.List){
-  log.Printf("Device %v connected", localhost+device.AppServerPort)
+  //log.Printf("Device %v connected", localhost+device.AppServerPort)
   //sync with all connected device
   for e := ConnectedDevices.Front(); e != nil; e = e.Next() {
     otherDevice := e.Value.(*Device)
@@ -99,12 +99,13 @@ func (device Device)AlertResource(appID string, resourceID string){
 }
 
 func (device Device)UpdateResource(appID string, resourceID string){
-  //log.Printf("Resource %v in %v update", resourceID, appID)
+  log.Printf("Resource %v in %v update", resourceID, appID)
   resource := device.Apps[appID][resourceID]
   resource.Update()
   sendCoAP(device.LRSMSServerPort, Ref, coap.PUT, device.makeResourceJson(appID ,resource))
   if (device.Channel != nil){
     device.Channel <- time.Now()
+    //log.Printf("@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
   }
 }
 
@@ -113,9 +114,13 @@ func (device Device)UpdateCacheResource(appID string, resourceID string,
   resource := device.Apps[appID][resourceID]
   resource.Content = []byte(content)
   resource.CreateTime = createTime
-  log.Printf("Resource %v update in %v", resource.URI, appID)
+  //log.Printf("Resource %v update in %v", resource.URI, appID)
   sendCoAP(device.LRSMSServerPort, Ref, coap.PUT, device.makeResourceJson(appID ,resource))
   //log.Printf("Resource %v manual update in %v", resource.URI, appID)
+  if (device.Channel != nil){
+    device.Channel <- time.Now()
+    //log.Printf("TTTTTTTTTTTTTTTTTTTT")
+  }
 }
 
 func (device Device)DeleteResource(appID string, resourceID string){

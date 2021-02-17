@@ -165,6 +165,7 @@ func (lrsms *LRSMS) RecieveUpdateFromInside(uri string, hostAdd string,
 	for k, v := range lrsms.ConnectedDevRes{
 		for e := v.Front(); e != nil; e = e.Next(){
 		  if	e.Value.(string) == uri{
+				//log.Printf("aaaaaaaaaaaaaaa %v %v", k, uri)
 		 	  lrsms.SentDeviceReffunc(k, hostAdd, uri,
 			 	  lrsms.ResourceRefs[uri].CreateTime)
 		  }
