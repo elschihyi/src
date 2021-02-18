@@ -237,6 +237,7 @@ func (lrsms *LRSMS)UpdateOtherDeviceRes(otherAdd string, hostAdd string,
 	lrsms.Mutex.Lock()
 	for k, _ := range resourceRefs {
     kInConnectedDevRes :=false
+		//log.Printf("@@@@@@@ %v", otherAdd)
 		for e := lrsms.ConnectedDevRes[otherAdd].Front(); e != nil; e = e.Next() {
 			if e.Value.(string) == k {
 				kInConnectedDevRes = true
