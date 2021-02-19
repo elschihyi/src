@@ -99,7 +99,7 @@ func (device Device)AlertResource(appID string, resourceID string){
 }
 
 func (device Device)UpdateResource(appID string, resourceID string){
-  log.Printf("Resource %v in %v update", resourceID, appID)
+  //log.Printf("Resource %v in %v update", resourceID, appID)
   resource := device.Apps[appID][resourceID]
   resource.Update()
   sendCoAP(device.LRSMSServerPort, Ref, coap.PUT, device.makeResourceJson(appID ,resource))

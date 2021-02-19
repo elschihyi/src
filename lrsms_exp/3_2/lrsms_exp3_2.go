@@ -19,10 +19,10 @@ const(
   initialPort int = 5700
   //deviceNum int = 1
   //appIDNum int = 1
-  iterations int = 10
+  iterations int = 30
   minResourceNum int = 51
   ResourceNumIncrement int = 50
-  MaxResourceNum int = 101
+  MaxResourceNum int = 301
 )
 
 var ConnectedDevices *list.List
