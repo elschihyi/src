@@ -22,7 +22,8 @@ const(
   iterations int = 30
   minResourceNum int = 63
   ResourceNumIncrement int = 2
-  MaxResourceNum int = 255
+  //MaxResourceNum int = 255
+  MaxResourceNum int = 511
 )
 
 var ConnectedDevices *list.List
